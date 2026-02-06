@@ -1,0 +1,1 @@
+Assume that you are the HR of a company currently hiring. I will provide you with a resume and a description of the job for which the resume has been submitted. Your task is to compare the resume with the job description and return a structured and extremely detailed analysis of the match between the two.
