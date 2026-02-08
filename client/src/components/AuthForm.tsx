@@ -17,30 +17,44 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin, onSwitch }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState(''); // <-- NEW: State for name field
-  
-  const [isSubmitting, setIsSubmitting] = useState(false); // Renamed from isLoading
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ email: '', password: '', confirmPassword: '' });
 
-  // Remove unused API_ENDPOINT constant
+  const clearErrors = () => {
+    setError('');
+    setFieldErrors({ email: '', password: '', confirmPassword: '' });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    clearErrors();
     setIsSubmitting(true);
 
+    // Client-side validation
+    const newFieldErrors = { email: '', password: '', confirmPassword: '' };
+
+    if (!email.trim()) {
+      newFieldErrors.email = "Email is required";
+    } else if (!email.includes('@')) {
+      newFieldErrors.email = "Invalid email";
+    }
+
+    if (!password) {
+      newFieldErrors.password = "Password is required";
+    } else if (password.length < 6) {
+      newFieldErrors.password = "Min 6 characters";
+    }
+
     if (!isLogin && password !== confirmPassword) {
-      setError("Passwords do not match.");
+      newFieldErrors.confirmPassword = "Passwords don't match";
+    }
+
+    if (newFieldErrors.email || newFieldErrors.password || newFieldErrors.confirmPassword) {
+      setFieldErrors(newFieldErrors);
       setIsSubmitting(false);
       return;
     }
-    
-    if (!isLogin && !name.trim()) {
-        setError("Please provide your name.");
-        setIsSubmitting(false);
-        return;
-    }
-
 
     try {
       if (isLogin) {
@@ -51,19 +65,29 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin, onSwitch }) => {
         navigate('/dashboard', { replace: true });
         
       } else {
-        // CALL CONTEXT SIGNUP FUNCTION
-        await signup(email, password, name);
-        
-        // On successful signup, show message and redirect user to the login form
-        alert('Registration successful! Please log in.');
-        onSwitch(); // Switch to the login view
+        await signup(email, password);
+        alert('✅ Registration successful! Please log in.');
+        onSwitch();
       }
       
     } catch (err: any) {
-      // Axios error handling sends the message through err.response.data
-      const errorMessage = err.response?.data?.message || 'An unknown network error occurred.';
-      setError(errorMessage);
-      alert(`Error: ${errorMessage}`);
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (Array.isArray(detail)) {
+          const newErrors = { email: '', password: '', confirmPassword: '' };
+          detail.forEach((error: any) => {
+            const field = error.loc?.[1];
+            if (field === 'email') newErrors.email = 'Invalid email';
+            else if (field === 'password') newErrors.password = error.msg;
+          });
+          setFieldErrors(newErrors);
+        } else {
+          if (detail.includes('already registered')) setFieldErrors({ ...fieldErrors, email: detail });
+          else setError(detail);
+        }
+      } else {
+        setError('Network error');
+      }
       
     } finally {
       setIsSubmitting(false);
@@ -77,20 +101,9 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin, onSwitch }) => {
       </h2>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-          <span className="block sm:inline">{error}</span>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
         </div>
-      )}
-        
-      {!isLogin && (
-        <Input
-          id="name"
-          label="Full Name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
       )}
 
       <Input
@@ -99,6 +112,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin, onSwitch }) => {
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        error={fieldErrors.email}
         required
       />
       <Input
@@ -107,6 +121,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin, onSwitch }) => {
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+        error={fieldErrors.password}
         required
       />
       
@@ -117,6 +132,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin, onSwitch }) => {
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
+          error={fieldErrors.confirmPassword}
           required
         />
       )}

@@ -101,7 +101,7 @@ async def root():
         </head>
         <body>
             <div class="container">
-                <h1>🎯 Welcome to ResumeWise API</h1>
+                <h1> Welcome to ResumeWise API</h1>
                 <p>FastAPI Backend Server</p>
                 <p>Visit <a href="/docs">/docs</a> for interactive API documentation</p>
             </div>
@@ -123,11 +123,13 @@ async def health_check():
 
 
 if __name__ == "__main__":
-    import uvicorn
-    
-    uvicorn.run(
-        "main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.ENVIRONMENT == "development"
-    )
+    try:
+        import uvicorn
+        uvicorn.run(
+            "main:app",
+            host=settings.HOST,
+            port=settings.PORT,
+            reload=settings.ENVIRONMENT == "development"
+        )
+    except ImportError:
+        print("❌ Error: uvicorn is not installed. Please install it with: pip install uvicorn")

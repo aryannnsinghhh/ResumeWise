@@ -3,7 +3,7 @@ Authentication controllers for user management.
 Handles signup, login, logout, and user profile retrieval.
 """
 from fastapi import Response, HTTPException, status, Request
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from app.models.user import User
 from app.utils.auth import hash_password, verify_password, create_access_token, decode_token
 from app.config.settings import settings
@@ -13,7 +13,13 @@ from app.config.settings import settings
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
-    name: str
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError('Password must be at least 6 characters')
+        return v
 
 
 class LoginRequest(BaseModel):
@@ -23,7 +29,6 @@ class LoginRequest(BaseModel):
 
 class UserResponse(BaseModel):
     email: str
-    name: str
 
 
 class MessageResponse(BaseModel):
@@ -71,9 +76,7 @@ class AuthController:
         
         return {
             "user": {
-                "email": user.email,
-                "name": user.name,
-                "created_at": user.created_at.isoformat()
+                "email": user.email
             }
         }
     
@@ -96,7 +99,7 @@ class AuthController:
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="User already exists."
+                detail="This email is already registered. Please use a different email or log in."
             )
         
         # Hash password
@@ -105,12 +108,11 @@ class AuthController:
         # Create new user
         new_user = User(
             email=data.email,
-            password=hashed_password,
-            name=data.name
+            password=hashed_password
         )
         await new_user.insert()
         
-        return {"message": "User registered successfully. Please log in."}
+        return {"message": "Registration successful"}
     
     @staticmethod
     async def login(data: LoginRequest, response: Response, request: Request) -> dict:
@@ -168,21 +170,21 @@ class AuthController:
         token = create_access_token(token_data)
         
         # Set secure HTTP-only cookie
+        is_production = settings.ENVIRONMENT == "production"
         response.set_cookie(
             key="jwt",
             value=token,
             httponly=True,
-            secure=settings.ENVIRONMENT == "production",
-            samesite="none",
+            secure=is_production,
+            samesite="none" if is_production else "lax",
             max_age=24 * 60 * 60  # 24 hours
         )
         
         return {
             "user": {
-                "email": user.email,
-                "name": user.name
+                "email": user.email
             },
-            "message": "Login successful."
+            "message": "Login successful"
         }
     
     @staticmethod
@@ -196,14 +198,15 @@ class AuthController:
         Returns:
             Success message
         """
+        is_production = settings.ENVIRONMENT == "production"
         response.delete_cookie(
             key="jwt",
-            secure=settings.ENVIRONMENT == "production",
-            samesite="none",
+            secure=is_production,
+            samesite="none" if is_production else "lax",
             path="/"
         )
         
-        return {"message": "Logout successful."}
+        return {"message": "Logout successful"}
 
 
 # Create singleton instance

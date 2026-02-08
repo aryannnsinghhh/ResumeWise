@@ -29,13 +29,8 @@ async def screen_candidate(
     - resumeText: Resume as plain text
     - jobDescriptionText: Job description as plain text
     
-    Returns detailed screening analysis including:
-    - Match score percentage
-    - Fit summary
-    - Critical missing skills
-    - Matched technical and soft skills
-    - Extracted candidate data
-    - Skill breakdown
+    Returns:
+        Detailed screening analysis with match score, skills breakdown, etc.
     """
     return await screening_controller.screen_candidate(
         resume_file=resume,

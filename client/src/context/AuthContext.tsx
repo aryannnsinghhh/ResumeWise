@@ -11,19 +11,16 @@ import client from '../api/client'; // Assuming you have configured the Axios cl
 // Define the shape of the User data returned by the backend
 interface UserData {
     email: string;
-    name: string; 
 }
 
 // 1. Define the Context's Shape (State and Actions)
 interface AuthContextType {
   isAuthenticated: boolean;
   user: UserData | null;
-  // FIX: login now accepts credentials and is an asynchronous function that returns a Promise.
-  login: (email: string, password: string) => Promise<void>; 
-  // NEW: signup function added
-  signup: (email: string, password: string, name: string) => Promise<void>; 
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  isLoading: boolean; 
+  isLoading: boolean;
 }
 
 // 2. Create the Context with a default (unauthenticated) value
@@ -37,97 +34,91 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true); 
+  const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
 
-  // --- Session Persistence Logic: Check the Cookie on Server ---
+  // --- Session Timeout Logic: 20 minutes (1200000 ms) ---
   useEffect(() => {
-    // Call the protected endpoint to check if the JWT cookie is valid
-    client.get('/auth/user') 
-        .then(response => {
-            // Success: Cookie is valid. Backend returned user data.
-            const userData = response.data.user;
-            setUser({ email: userData.email, name: userData.name });
-        })
-        .catch(() => {
-            // Failure: Cookie missing, expired, or invalid. Backend should have cleared it.
-            setUser(null); 
-        })
-        .finally(() => {
-            setIsLoading(false);
-        });
-  }, []); // Run only once on mount
+    if (!user) return; // Only track activity when logged in
 
-  // FIX: login now handles the network request and error propagation
-  const login = async (email: string, password: string): Promise<void> => {
-    setIsLoading(true); // Set loading while the request is pending
+    const SESSION_TIMEOUT = 20 * 60 * 1000; // 20 minutes in milliseconds
+
+    // Check every minute if session has expired
+    const checkSessionExpiry = setInterval(() => {
+      const now = Date.now();
+      const timeSinceLastActivity = now - lastActivityTime;
+
+      if (timeSinceLastActivity >= SESSION_TIMEOUT) {
+        console.log('Session expired due to inactivity');
+        logout(); // Auto-logout after 20 minutes of inactivity
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(checkSessionExpiry);
+  }, [user, lastActivityTime]);
+
+  // --- Track user activity to reset timeout ---
+  useEffect(() => {
+    if (!user) return; // Only track when logged in
+
+    const updateActivity = () => {
+      setLastActivityTime(Date.now());
+    };
+
+    // Track various user activities
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+    events.forEach(event => {
+      window.addEventListener(event, updateActivity);
+    });
+
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, updateActivity);
+      });
+    };
+  }, [user]); 
+
+  useEffect(() => {
+    client.get('/auth/user')
+      .then(res => setUser(res.data.user))
+      .catch(() => setUser(null))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    setIsLoading(true);
     try {
-        const response = await client.post('/auth/login', { email, password });
-        
-        // Success: The cookie was set by the backend. We only update frontend state.
-        const userData = response.data.user;
-        setUser({ email: userData.email, name: userData.name });
-        
+      const res = await client.post('/auth/login', { email, password });
+      setUser(res.data.user);
     } catch (error) {
-        // If the API call fails (e.g., 401 Invalid Credentials), clear state and re-throw
-        setUser(null); 
-        // Throw the error so the calling component (AuthForm) can catch and display it
-        throw error; 
+      setUser(null);
+      throw error;
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
-  // NEW: Signup function to handle network request
-  const signup = async (email: string, password: string, name: string): Promise<void> => {
-    setIsLoading(true); 
-    try {
-        await client.post('/auth/signup', { email, password, name });
-        
-        // NOTE: Unlike login, signup typically does NOT set a cookie. 
-        // We just confirm success and let the user redirect to the login form.
-        
-    } catch (error) {
-        // Throw the error so the calling component (AuthForm) can catch and display it
-        throw error; 
-    } finally {
-        setIsLoading(false);
-    }
+  const signup = async (email: string, password: string) => {
+    await client.post('/auth/signup', { email, password });
   };
 
-
-  // Logout function clears the session on both frontend and backend
   const logout = () => {
-    // Call backend to clear the HttpOnly cookie
-    client.post('/auth/logout')
-        .finally(() => {
-            // Clear frontend state and update isAuthenticated flag
-            setUser(null); 
-        });
+    client.post('/auth/logout').finally(() => setUser(null));
   };
 
-  // Memoize the value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
     isAuthenticated: !!user,
     user,
     login,
-    signup, // <-- Added signup to the context value
+    signup,
     logout,
     isLoading,
-  }), [user, isLoading]); 
+  }), [user, isLoading]);
 
-  // Display a loader while determining session status
   if (isLoading) {
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-            <p className="text-gray-600">Loading session...</p>
-        </div>
-    ); 
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };
 
 // 4. Create a Custom Hook for easy consumption

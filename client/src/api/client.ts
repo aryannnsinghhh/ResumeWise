@@ -1,8 +1,8 @@
 // src/api/client.ts (or similar)
 import axios from 'axios';
 
-// 1. Define the Base URL for your Express backend
-const BASE_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8080'; 
+// 1. Define the Base URL for your FastAPI backend
+const BASE_URL = (import.meta.env.VITE_SERVER_URL || 'http://localhost:8000') + '/api'; 
 
 // 2. Create an instance with crucial configuration
 const client = axios.create({

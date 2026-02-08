@@ -76,7 +76,9 @@ async def call_llm_screening(resume_text: str, job_description_text: str) -> Scr
         "generationConfig": {
             "responseMimeType": "application/json",
             "responseSchema": SCREENING_SCHEMA,
-            "temperature": 0.1
+            "temperature": 0,
+            "topP": 1,
+            "topK": 1
         }
     }
     

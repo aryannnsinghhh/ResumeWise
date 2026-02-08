@@ -1,146 +1,336 @@
-# ResumeWise AI
-
-<h3>Video Demo Link: <a href="https://drive.google.com/file/d/1TWeAB2lsSnLss7LiY2YWAPTFMG_cdLV8/view?usp=sharing" target="_blank">Click Here</a></h3>
-
-<h3>Deployment: <a href="https://resumewise-ai.vercel.app/" target="_blank">Click Here</a></h3>
+# ResumeWise
 
 ## Overview
 
-ResumeWise AI is a powerful, full-stack web application designed to streamline the initial stages of the recruitment process. It leverages artificial intelligence to analyze resumes against job descriptions, providing a detailed and structured comparison. This allows human resources (HR) professionals and hiring managers to quickly identify the most promising candidates.
+ResumeWise is a full-stack AI-powered resume screening platform that automates initial candidate evaluation by intelligently analyzing resumes against job descriptions. Built with FastAPI and React, it leverages Google's Generative AI to provide structured, detailed candidate assessments with match scoring, skill gap analysis, and suitability recommendations—reducing manual screening time for HR professionals and hiring managers.
 
-## Features
+## Key Features
 
--   **User Authentication:** Secure user registration and login system using JWT for session management.
--   **Resume Upload/Input:** Users can upload/input resumes in various formats (e.g., PDF, DOCX, text).
--   **Job Description Upload/Input:** A simple interface to upload/input the job description for the role being hired for.
--   **AI-Powered Analysis:** Utilizes Google's Generative AI to perform an in-depth analysis of the uploaded resume against the provided job description.
--   **Results Display:** Presents the analysis in a clear and structured format, highlighting the candidate's suitability for the role.
--   **Responsive UI:** A modern and responsive user interface built with React and Tailwind CSS.
+-   **JWT-Based Authentication:** Secure user registration, login, and logout with HTTP-only cookie sessions and middleware-protected routes.
+-   **Flexible Input Methods:** Support for both file uploads (PDF, DOCX, TXT) and direct text input for resumes and job descriptions.
+-   **Concurrent Document Processing:** Asynchronous parsing of multiple document formats with PyPDF2 and python-docx libraries.
+-   **AI-Powered Semantic Analysis:** Google Generative AI (Gemini) integration for intelligent resume-to-job-description matching with structured JSON Schema responses.
+-   **Comprehensive Candidate Evaluation:** 
+    - Overall match score (0-100%)
+    - Detailed fit summary with strengths and weaknesses
+    - Matched technical and soft skills
+    - Critical missing skills identification
+    - Extracted candidate information (name, email, experience)
+-   **Resilient API Integration:** Exponential backoff retry mechanism for handling AI service transient failures.
+-   **Responsive Modern UI:** React-TypeScript frontend with Tailwind CSS, featuring real-time loading states and instant result display.
+-   **RESTful API Architecture:** Clean separation of concerns with routes, controllers, models, and middleware layers.
 
 ## Tech Stack
 
 ### Frontend
 
--   **Framework:** React.js
--   **Language:** TypeScript
--   **Build Tool:** Vite
--   **Styling:** Tailwind CSS
+-   **Framework:** React 19
+-   **Language:** TypeScript 5.9
+-   **Build Tool:** Vite 7
+-   **Styling:** Tailwind CSS 3.4
 -   **HTTP Client:** Axios
--   **Routing:** React Router DOM
+-   **Routing:** React Router DOM 7
+-   **Icons:** Lucide React
 
 ### Backend
 
--   **Framework:** Express.js
--   **Language:** TypeScript
--   **Runtime:** Node.js
--   **AI:** Google Generative AI
--   **Authentication:** JSON Web Tokens (JWT)
--   **File Handling:** Multer
--   **Database:** MongoDB with Mongoose
+-   **Framework:** FastAPI 0.115
+-   **Language:** Python 3.8+
+-   **Server:** Uvicorn with standard extras
+-   **AI:** Google Generative AI (Gemini)
+-   **Authentication:** JWT (python-jose) + bcrypt password hashing
+-   **Database:** MongoDB with Beanie ODM (Motor async driver)
+-   **Document Processing:** PyPDF2 & python-docx
+-   **Task Scheduling:** APScheduler
+-   **HTTP Client:** httpx (async)
 
 ## Project Structure
 
-The project is organized into two main directories:
-
--   `client/`: Contains the frontend React application.
--   `server/`: Contains the backend Node.js and Express.js application, including all API routes, controllers, models, and AI integration.
-
-## Project Architecture
-
-The general architecture of the ResumeWise AI Screener project follows a classic, secure **Three-Tier Architecture** pattern, optimized for **asynchronous processing** and utilizing a specific API service (the LLM Orchestrator) for its core intelligence.
-
-- **Client Presentation Layer:** The user interacts with a responsive **Single-Page Application (SPA)** that handles all the presentation and user input (file upload/text paste) within the browser.
-
-- **API Gateway & Firewall:** All client requests are routed through a central API server (the backend entry point). This layer includes middleware that acts as a firewall, validating the session token before any request proceeds to the business logic.
-
-- **Secure Session Management:** User identity is maintained via a secure, **HTTP-Only session token (JWT)** stored in a cookie. The token is validated upon every request to maintain security without requiring persistent server-side session storage.
- 
-- **Data Ingestion & Storage:** User profile information and application configuration settings are persistently stored in a dedicated **NoSQL Document Database (MongoDB)**.
-
-- **Asynchronous Pre-Processing (Concurrency):** The core screening route immediately identifies the inputs (file vs. text). If files are uploaded, the system executes two distinct file parsing tasks (Resume and JD) **concurrently** to minimize latency, waiting only for the longest task to complete.
- 
-- **Document Parsing Service:** A utility module converts the raw file buffers (PDF, DOCX) into clean, usable text strings. This is a critical step that prepares unstructured documents for the AI.
- 
-- **LLM Orchestration Layer:** This is the core intelligence component. It constructs a precise natural language prompt using the extracted text and a strict JSON Schema definition to communicate with the external Generative AI service (Gemini).
-
-- **External AI Service:** The application relies on an external Generative AI Microservice to perform contextual comparison, scoring, and structured data extraction based on the provided schema.
-
-- **Resilience & Retries:** The communication channel with the external AI service includes a built-in **Exponential Backoff Retry Mechanism** to gracefully handle transient service failures or overload conditions (e.g., 503 errors).
-
-- **Structured Response:** The final output is a clean, structured JSON object (Match Score, Gap Lists, etc.). This object is returned to the client's presentation layer for visual display in the results dashboard, completing the cycle.
-
-## LLM Prompt
-
-Assume that you are the HR of a company currently hiring. I will provide you with a resume and a description of the job for which the resume has been submitted. Your task is to compare the resume with the job description and return a structured and extremely detailed analysis of the match between the two.
-
-```text
-JOB DESCRIPTION:
---- [Job Description Text] ---
-RESUME TEXT: 
---- [Resume Text] ---
+```
+ResumeWise/
+├── client/                          # React TypeScript frontend
+│   ├── src/
+│   │   ├── api/                     # API client utilities
+│   │   ├── components/              # Reusable React components
+│   │   │   └── AuthForm.tsx        # Authentication form
+│   │   ├── context/                 # React Context providers
+│   │   │   ├── AuthContext.tsx     # User authentication state
+│   │   │   └── ScreenLoadingContext.tsx  # Loading state management
+│   │   ├── features/                # Feature-specific components
+│   │   │   ├── FeatureOverview.tsx
+│   │   │   ├── ResultsDisplay.tsx  # AI analysis results display
+│   │   │   ├── ScreeningForm.tsx   # Resume/JD upload form
+│   │   │   └── Testimonials.tsx
+│   │   ├── layout/                  # Layout components
+│   │   │   ├── Header.tsx
+│   │   │   └── Footer.tsx
+│   │   ├── pages/                   # Page-level components
+│   │   │   ├── HomePage.tsx
+│   │   │   ├── AuthPage.tsx
+│   │   │   └── ScreeningDashboard.tsx
+│   │   ├── ui/                      # UI primitives
+│   │   │   ├── Button.tsx
+│   │   │   ├── Input.tsx
+│   │   │   └── ArrowLeftIcon.tsx
+│   │   ├── App.tsx                  # Main app with routing
+│   │   └── main.tsx                 # Entry point
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   └── tsconfig.json
+│
+└── server_fastapi/                  # Python FastAPI backend
+    ├── app/
+    │   ├── config/                  # Configuration & database
+    │   │   ├── settings.py         # Environment variables
+    │   │   └── db.py               # MongoDB connection
+    │   ├── controllers/             # Business logic
+    │   │   ├── auth_controller.py  # Auth operations
+    │   │   └── screening_controller.py  # AI screening logic
+    │   ├── middleware/              # Request middleware
+    │   │   └── auth_middleware.py  # JWT verification
+    │   ├── models/                  # Data models
+    │   │   ├── user.py             # User schema
+    │   │   └── screening.py        # Screening result schema
+    │   ├── routes/                  # API endpoints
+    │   │   ├── auth_routes.py      # Auth endpoints
+    │   │   └── screening_routes.py # Screening endpoints
+    │   └── utils/                   # Utility functions
+    │       ├── auth.py             # JWT & password utils
+    │       ├── document_parser.py  # PDF/DOCX extraction
+    │       └── scheduler.py        # APScheduler tasks
+    ├── main.py                      # FastAPI app entry point
+    ├── requirements.txt
+    └── prompt.txt                   # LLM prompt template
 ```
 
-## LLM Output Format (Required JSON Schema)
+## API Endpoints
 
-The LLM response **must** be a structured JSON object containing all the following fields and sub-properties.
+### Authentication Routes (`/api/auth`)
+- **POST /signup** - Register new user account
+- **POST /login** - Authenticate user and create session
+- **POST /logout** - Clear user session (protected)
+- **GET /user** - Get current authenticated user info (protected)
 
-### 1. Core Metrics (Top-Level)
+### Screening Routes (`/api`)
+- **POST /screen** - Analyze resume against job description (protected)
+  - Accepts file uploads (PDF/DOCX/TXT) or text input
+  - Returns structured AI analysis with match score, skills, and recommendations
 
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `match_score_percent` | Number (0-100) | The overall fit score from 0 to 100, indicating how well the candidate matches the job description. |
-| `fit_summary` | String | A detailed five- to six-sentence summary of the candidate's primary strengths and weaknesses concerning the role. |
-| `critical_missing_skills` | Array of Strings | A list of all MUST-HAVE skills or certifications mentioned in the job description that were absent from the resume. |
+## Architecture Overview
 
-### 2. Detailed Skill Matching (New Arrays)
+ResumeWise follows a **secure three-tier architecture** with async processing:
 
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `technical_skills_matched` | Array of Strings | A list of all specific technical skills (e.g., Python, AWS, React) that the LLM successfully found and matched on the resume. |
-| `soft_skills_matched` | Array of Strings | A list of all specific soft skills (e.g., leadership, communication, problem-solving) that the LLM successfully found and matched on the resume. |
+**1. Frontend (Client Tier)**
+- React SPA with TypeScript for type safety
+- Context API for global state (auth, loading)
+- Axios for HTTP requests with JWT cookies
+- Protected and public route guards
 
-### 3. Extracted Data (Object: `extracted_data`)
+**2. Backend (API Tier)**
+- FastAPI with async/await for concurrent operations
+- JWT middleware protecting sensitive endpoints
+- HTTP-only cookies for secure session storage
+- Lifespan events for database connection management
 
-The sub-object `extracted_data` contains key personal and professional data points:
+**3. Data Tier**
+- MongoDB with Beanie ODM for async database operations
+- User collection for authentication
+- Efficient document-based storage for screening results
 
-| Sub-Property | Description |
-| :--- | :--- |
-| `name` | The candidate's name. |
-| `email` | The candidate's email address. |
-| `total_years_experience` | The total relevant years of professional experience extracted from the document. |
+**4. External Services**
+- Google Generative AI (Gemini) for semantic analysis
+- Exponential backoff retry (5 attempts) for reliability
 
-### 4. Skill Counts (Object: `skill_breakdown`)
+**Data Flow:**
+1. User uploads resume + job description (or pastes text)
+2. Backend validates JWT and processes files concurrently
+3. Document parser extracts text from PDF/DOCX
+4. Structured prompt sent to Gemini API with JSON schema
+5. AI response parsed and validated
+6. Results displayed instantly in React dashboard
 
-The sub-object `skill_breakdown` summarizes the skill counts (used for quick dashboard metrics):
+## AI Analysis Output
 
-| Sub-Property | Description |
-| :--- | :--- |
-| `technical_match_count` | The total count of technical skills matched (should equal the length of `technical_skills_matched`). |
-| `soft_skill_match_count` | The total count of soft skills matched (should equal the length of `soft_skills_matched`). |
+The screening endpoint returns a structured JSON response with the following fields:
+
+**Core Metrics:**
+- `match_score_percent` (0-100): Overall candidate fit score
+- `fit_summary`: Detailed 5-6 sentence assessment of strengths and weaknesses
+- `critical_missing_skills`: Array of required skills absent from resume
+
+**Skill Analysis:**
+- `technical_skills_matched`: Array of matched technical skills (Python, React, AWS, etc.)
+- `soft_skills_matched`: Array of matched soft skills (leadership, communication, etc.)
+
+**Extracted Candidate Data:**
+- `name`: Candidate's name
+- `email`: Contact email
+- `total_years_experience`: Calculated work experience
+
+**Skill Breakdown:**
+- `technical_match_count`: Number of technical skills matched
+- `soft_skill_match_count`: Number of soft skills matched
 
 ## Getting Started
 
 ### Prerequisites
 
--   Node.js and npm
--   Tailwind CSS
--   MongoDB
--   Gemini API
+-   **Python 3.8+** with pip
+-   **Node.js 18+** and npm
+-   **MongoDB** (local installation or MongoDB Atlas account)
+-   **Google Gemini API key** ([Get it here](https://makersuite.google.com/app/apikey))
 
-### Installation and Running
+### Environment Configuration
 
-**Backend:**
-
+**Backend (.env in `server_fastapi/`):**
 ```bash
-cd server
-npm install
-npm run dev
+# Database
+MONGODB_URL=mongodb://localhost:27017
+DATABASE_NAME=resumewise
+
+# Server
+HOST=0.0.0.0
+PORT=8000
+
+# Security
+JWT_SECRET=your-secret-key-here
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=10080
+
+# Google AI
+GEMINI_API_KEY=your-gemini-api-key-here
+GEMINI_API_URL=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent
+
+# CORS
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
-**Frontend:**
+**Frontend (.env in `client/`):**
+```bash
+VITE_SERVER_URL=http://localhost:8000
+```
 
+### Installation
+
+**1. Backend Setup:**
+```bash
+cd server_fastapi
+python -m venv venv
+
+# Windows
+.\venv\Scripts\activate
+
+# Linux/Mac
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+# Create and configure .env file (see above)
+
+# Run the server
+python main.py
+```
+
+Server will start on `http://localhost:8000`
+
+**2. Frontend Setup:**
 ```bash
 cd client
 npm install
+
+# Create .env file (see above)
+
 npm run dev
 ```
+
+Frontend will start on `http://localhost:5173`
+
+### Quick Start Commands
+
+**Backend:**
+```bash
+cd server_fastapi
+.\venv\Scripts\python.exe main.py
+```
+
+**Frontend:**
+```bash
+cd client
+npm run dev
+```
+
+## Usage
+
+1. Navigate to `http://localhost:5173`
+2. Register/Login with your credentials
+3. Upload resume and job description (PDF/DOCX) or paste text
+4. Click "Screen Candidate"
+5. View detailed AI analysis with match scores and recommendations
+
+## Project Features Implemented
+
+✅ **Authentication System**
+- User registration and login
+- JWT-based session management
+- HTTP-only cookie storage
+- Protected route middleware
+
+✅ **Document Processing**
+- PDF parsing with PyPDF2
+- DOCX parsing with python-docx
+- Text input support
+- Concurrent file processing
+
+✅ **AI Integration**
+- Google Gemini API integration
+- Structured JSON schema responses
+- Exponential backoff retry mechanism
+- Custom prompt template
+
+✅ **Frontend**
+- React 19 with TypeScript
+- Tailwind CSS styling
+- Context-based state management
+- Protected and public routes
+- Real-time loading indicators
+- Responsive design
+
+✅ **Backend**
+- FastAPI async architecture
+- MongoDB with Beanie ODM
+- JWT authentication middleware
+- RESTful API endpoints
+- APScheduler for background tasks
+- CORS configuration
+
+## Technologies & Libraries
+
+**Frontend:**
+- react, react-dom, react-router-dom
+- typescript, vite
+- tailwindcss, postcss, autoprefixer
+- axios
+- lucide-react (icons)
+
+**Backend:**
+- fastapi, uvicorn
+- beanie, motor, pymongo (MongoDB)
+- python-jose, passlib, bcrypt (Auth)
+- google-generativeai
+- PyPDF2, python-docx, pypdf
+- APScheduler
+- httpx, requests
+- python-dotenv, pydantic
+
+## Contributing
+
+This is a portfolio project. Suggestions and feedback are welcome!
+
+## License
+
+This project is open source and available for educational purposes.
+
+---
+
+**Built with ❤️ using React, TypeScript, FastAPI, MongoDB, and Google Generative AI**

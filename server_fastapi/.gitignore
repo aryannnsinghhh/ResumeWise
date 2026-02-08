@@ -43,6 +43,7 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Logs
 *.log
@@ -51,7 +52,13 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+test_*.py
+*_test.py
 
 # Uploaded files
 uploads/
 temp/
+
+# Documentation (keep only essential)
+TESTING.md
+MIGRATION_STATUS.md

@@ -53,7 +53,11 @@ const ScreeningDashboard: React.FC = () => {
     // }
     // console.log("---------------------------");
 
-    client.post('/screen', formData, {})
+    client.post('/screen', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        }
+    })
     .then(response => {
         // Response data is the structured JSON from the LLM endpoint (200 OK)
         setResults(response.data as MatchResult);
