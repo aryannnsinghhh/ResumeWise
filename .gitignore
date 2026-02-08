@@ -1,0 +1,59 @@
+# Environment Variables (CRITICAL - Never commit these!)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv
+build/
+dist/
+*.egg-info/
+
+# Node
+node_modules/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Testing & Secrets (DO NOT COMMIT)
+TESTING.md
+*TESTING*.md
+*.secret
+secrets/
+credentials/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Compiled
+*.pyc
+dist/
+build/
